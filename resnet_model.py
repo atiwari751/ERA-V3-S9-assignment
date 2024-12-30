@@ -11,7 +11,7 @@ class Bottleneck(nn.Module): # Bottleneck module as a single class which will be
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False) # note this is the convolution which will use a stride of 2 to match the input and output dimensions. This happens in the first block of layers 2, 3 and 4 only. All convolutions in all subsequent blocks in each of the layers use a stride of 1, as per the ResNet model. 
         self.bn2 = nn.BatchNorm2d(out_channels)
-        self.conv3 = nn.Conv2d(out_channels, out_channels * self.expansion, kernel_size=1, bias=False) # this is the convolutions where number of channels is expanded, as per the ResNet model. 
+        self.conv3 = nn.Conv2d(out_channels, out_channels * self.expansion, kernel_size=1, bias=False) # this is the convolution where number of channels is expanded, as per the ResNet model. 
         self.bn3 = nn.BatchNorm2d(out_channels * self.expansion)
         self.relu = nn.ReLU(inplace=True) # this will modify the original tensor rather than operating on a copy. Significant memory savings as this module is the fundamental repeating unit. Makes sense to use only in the last layer so that we're not unintentionally corrupting the input tensor in the previous layers. 
         self.downsample = downsample # helps match the output dimensions to the input dimensions for the special skip connection.
@@ -30,11 +30,11 @@ class Bottleneck(nn.Module): # Bottleneck module as a single class which will be
         out = self.conv3(out)
         out = self.bn3(out)
 
-        # Special skip connection - triggered only in the first block of layers 2, 3 and 4, where we need to downsample the input x to match the dimensions of F(x) after convolutions, to be able to add them up.
+        # Special skip connection - triggered only in the first block of all layers, where we need to downsample the dimensions and channels of input x to match those of F(x) after convolutions, to be able to add them up.
         if self.downsample is not None:
             identity = self.downsample(x)
 
-        out += identity # The ResNet addition is here; H(x) = F(x) + x. Skip connection by virtue of adding identity variable, which is the original input without convolutions.
+        out += identity # The ResNet addition is here; H(x) = F(x) + x. Skip connection by virtue of adding identity variable, which is the original input without convolutions.If special skip connection, downsampling will be applied.
         out = self.relu(out)
 
         return out
