@@ -9,7 +9,7 @@ class Bottleneck(nn.Module): # Bottleneck module as a single class which will be
         super(Bottleneck, self).__init__()
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(out_channels)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False) # note this is the convolution which will use a stride of 2 to match the input and output dimensions. This happens in the first block of layers 2, 3 and 4 only. All convolutions in all subsequent blocks in each of the layers use a stride of 1, as per the ResNet model. 
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False) # note this is the convolution which will use a stride of 2 to reduce the image size. This happens in the first block of layers 2, 3 and 4 only. All other convolutions in all blocks in each of the layers use a stride of 1, as per the ResNet model. 
         self.bn2 = nn.BatchNorm2d(out_channels)
         self.conv3 = nn.Conv2d(out_channels, out_channels * self.expansion, kernel_size=1, bias=False) # this is the convolution where number of channels is expanded, as per the ResNet model. 
         self.bn3 = nn.BatchNorm2d(out_channels * self.expansion)
@@ -28,14 +28,14 @@ class Bottleneck(nn.Module): # Bottleneck module as a single class which will be
         out = self.relu(out)
 
         out = self.conv3(out)
-        out = self.bn3(out)
+        out = self.bn3(out) #not applied ReLU() here because we don't want to remove the negatives just yet, as the next step is addition with the original image. In order to learn the residual F(x) correctly, negatives will be needed in the tensor now. The residual function F(x) should learn both positives and negatives now. 
 
         # Special skip connection - triggered only in the first block of all layers, where we need to downsample the dimensions and channels of input x to match those of F(x) after convolutions, to be able to add them up.
         if self.downsample is not None:
             identity = self.downsample(x)
 
-        out += identity # The ResNet addition is here; H(x) = F(x) + x. Skip connection by virtue of adding identity variable, which is the original input without convolutions.If special skip connection, downsampling will be applied.
-        out = self.relu(out)
+        out += identity # The core ResNet addition is here; H(x) = F(x) + x. Skip connection by virtue of adding identity variable, which is the original input without convolutions.If special skip connection, downsampling will be applied.
+        out = self.relu(out) # ReLU() finally applied here, after the addition. Now that the original input x and residual F(x) have been added, we can safely remove the negatives.  
 
         return out
 
@@ -47,7 +47,7 @@ class ResNet50(nn.Module):
         ## See Excel sheet for Model Architecture
         
         # Adjusted Initial Conv Layer for CIFAR-10
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False) #kernel size is 3 here for CIFAR-10, will need to be 7 for ImageNet 1k. Will also need maxpools for ImageNet 1k.
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True) # as before, this will modify the input tensor. Good memory savings here as the input image will be large in size here. 
 
@@ -97,4 +97,4 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
     model = ResNet50().to(device)
-    summary(model, input_size=(3, 32, 32)) 
+    summary(model, input_size=(3, 32, 32)) # size is (3, 32, 32) for CIFAR-10. Will be (3, 224, 224) for ImageNet 1k.
