@@ -10,20 +10,31 @@ from torchvision import datasets
 from checkpoint import save_checkpoint, load_checkpoint
 import matplotlib.pyplot as plt
 from torchvision.utils import make_grid
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+import numpy as np
 
 # Define transformations
-transform = transforms.Compose([
-    transforms.Resize(256),  # Resize the smaller side to 256 pixels while keeping aspect ratio
-    transforms.CenterCrop(224),  # Then crop to 224x224 pixels from the center
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # ImageNet normalization
+train_transform = A.Compose([
+    A.RandomResizedCrop(height=224, width=224, scale=(0.08, 1.0), ratio=(3/4, 4/3), p=1.0),
+    A.HorizontalFlip(p=0.5),
+    A.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1, p=0.8),
+    A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+    ToTensorV2()
+])
+
+test_transform = A.Compose([
+    A.Resize(height=256, width=256),
+    A.CenterCrop(height=224, width=224),
+    A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+    ToTensorV2()
 ])
 
 # Train dataset and loader
-trainset = datasets.ImageFolder(root='/mnt/imagenet/ILSVRC/Data/CLS-LOC/train', transform=transform)
+trainset = datasets.ImageFolder(root='/mnt/imagenet/ILSVRC/Data/CLS-LOC/train', transform=lambda img: train_transform(image=np.array(img))['image'])
 trainloader = DataLoader(trainset, batch_size=128, shuffle=True, num_workers=16, pin_memory=True)
 
-testset = datasets.ImageFolder(root='/mnt/imagenet/ILSVRC/Data/CLS-LOC/val', transform=transform )
+testset = datasets.ImageFolder(root='/mnt/imagenet/ILSVRC/Data/CLS-LOC/val', transform=lambda img: test_transform(image=np.array(img))['image'])
 testloader = DataLoader(testset, batch_size=1000, shuffle=False, num_workers=16, pin_memory=True)
 
 # Initialize model, loss function, and optimizer
