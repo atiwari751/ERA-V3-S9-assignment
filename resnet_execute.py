@@ -7,6 +7,7 @@ import torch.optim as optim
 from resnet_model import ResNet50
 from tqdm import tqdm
 from torchvision import datasets
+from checkpoint import save_checkpoint, load_checkpoint
 
 # Define transformations
 transform = transforms.Compose([
@@ -89,11 +90,32 @@ def test(model, device, test_loader, criterion):
 
     test_accuracy = 100.*correct/total
     print(f'Test Loss: {test_loss/len(test_loader):.4f}, Accuracy: {test_accuracy:.2f}%')
-    return test_accuracy
+    return test_accuracy, test_loss/len(test_loader)
 
 # Main execution
 if __name__ == '__main__':
+    # Early stopping parameters and checkpoint path
+    checkpoint_path = "checkpoint.pth"
+    best_loss = float('inf')
+    patience = 5
+    patience_counter = 0
+    # Load checkpoint if it exists to resume training
+    try:
+        model, optimizer, best_test_accuracy = load_checkpoint(model, optimizer, checkpoint_path)
+    except FileNotFoundError:
+        print("No checkpoint found, starting from scratch.")
+
     for epoch in range(1, 6):  # 20 epochs
         train_accuracy = train(model, device, trainloader, optimizer, criterion, epoch)
-        test_accuracy = test(model, device, testloader, criterion)
+        test_accuracy, test_loss = test(model, device, testloader, criterion)
         print(f'Epoch {epoch} | Train Accuracy: {train_accuracy:.2f}% | Test Accuracy: {test_accuracy:.2f}%')  
+        if test_loss < best_loss:
+            best_loss = test_loss
+            patience_counter = 0
+            save_checkpoint(model, optimizer, epoch, test_loss, checkpoint_path)
+        else: 
+            patience_counter += 1
+
+        if patience_counter >= patience:
+            print("Early stopping triggered. Training terminated.")
+            break
