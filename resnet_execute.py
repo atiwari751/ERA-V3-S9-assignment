@@ -105,10 +105,17 @@ if __name__ == '__main__':
     except FileNotFoundError:
         print("No checkpoint found, starting from scratch.")
 
+    # Store results for each epoch
+    results = []
+
     for epoch in range(1, 6):  # 20 epochs
         train_accuracy = train(model, device, trainloader, optimizer, criterion, epoch)
         test_accuracy, test_loss = test(model, device, testloader, criterion)
         print(f'Epoch {epoch} | Train Accuracy: {train_accuracy:.2f}% | Test Accuracy: {test_accuracy:.2f}%')  
+        
+        # Append results for this epoch
+        results.append((epoch, train_accuracy, test_accuracy))
+        
         if test_loss < best_loss:
             best_loss = test_loss
             patience_counter = 0
@@ -119,3 +126,8 @@ if __name__ == '__main__':
         if patience_counter >= patience:
             print("Early stopping triggered. Training terminated.")
             break
+
+    # Print the results in a tab-separated format
+    print("\nEpoch\tTrain Accuracy\tTest Accuracy")
+    for epoch, train_acc, test_acc in results:
+        print(f"{epoch}\t{train_acc:.2f}\t{test_acc:.2f}")
