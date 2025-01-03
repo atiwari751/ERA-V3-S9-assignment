@@ -3,7 +3,7 @@ import torch.nn as nn
 from torchsummary import summary
 
 class Bottleneck(nn.Module): # Bottleneck module as a single class which will be used to create the ResNet model. Each bottleneck as 3 convolutions. 
-    expansion = 4 # sets how much the bottleneck will expand the output channels of the last block to. Used 4 as per original paper. 
+    expansion = 4 # sets how much the bottleneck will expand the output channels of the last layer in a bottleneck block to. Used 4 as per the original paper. 
 
     def __init__(self, in_channels, out_channels, stride=1, downsample=None):
         super(Bottleneck, self).__init__()
@@ -13,8 +13,8 @@ class Bottleneck(nn.Module): # Bottleneck module as a single class which will be
         self.bn2 = nn.BatchNorm2d(out_channels)
         self.conv3 = nn.Conv2d(out_channels, out_channels * self.expansion, kernel_size=1, bias=False) # this is the convolution where number of channels is expanded, as per the ResNet model. 
         self.bn3 = nn.BatchNorm2d(out_channels * self.expansion)
-        self.relu = nn.ReLU(inplace=True) # this will modify the original tensor rather than operating on a copy. Significant memory savings as this module is the fundamental repeating unit. Makes sense to use only in the last layer so that we're not unintentionally corrupting the input tensor in the previous layers. 
-        self.downsample = downsample # helps match the output dimensions to the input dimensions for the special skip connection.
+        self.relu = nn.ReLU(inplace=True) # this will modify the original tensor rather than operating on a copy. Significant memory savings as this module is the fundamental repeating unit. 
+        self.downsample = downsample # helps match the input dimensions to the dimensions after convolution for the special skip connection.
 
     def forward(self, x):
         identity = x
@@ -40,16 +40,17 @@ class Bottleneck(nn.Module): # Bottleneck module as a single class which will be
         return out
 
 class ResNet50(nn.Module):
-    def __init__(self, num_classes=10): # num_classes to be set as per the dataset. 10 for CIFAR-10, 1000 for ImageNet 1k.
+    def __init__(self, num_classes=1000): # num_classes to be set as per the dataset. 10 for CIFAR-10, 1000 for ImageNet 1k.
         super(ResNet50, self).__init__()
         self.in_channels = 64 # only used for the initiation of the first bottleneck block in the first layer. 
         
         ## See Excel sheet for Model Architecture
         
-        # Adjusted Initial Conv Layer for CIFAR-10
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False) #kernel size is 3 here for CIFAR-10, will need to be 7 for ImageNet 1k. Will also need maxpools for ImageNet 1k.
+        # Adjusted Initial Conv Layer for ImageNet 1k
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False) #kernel size is 7 here for ImageNet 1k.
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True) # as before, this will modify the input tensor. Good memory savings here as the input image will be large in size here. 
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1) # Add max pooling layer
 
         # Layers with Bottleneck Blocks 
         self.layer1 = self._make_layer(Bottleneck, 64, 3) # stride is 1 here, so the downsampling will only adjust for the channel size in the first block of this layer
@@ -81,6 +82,7 @@ class ResNet50(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
+        x = self.maxpool(x) # Add max pooling layer in forward pass
 
         x = self.layer1(x)
         x = self.layer2(x)
@@ -97,4 +99,4 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
     model = ResNet50().to(device)
-    summary(model, input_size=(3, 32, 32)) # size is (3, 32, 32) for CIFAR-10. Will be (3, 224, 224) for ImageNet 1k.
+    summary(model, input_size=(3, 224, 224)) # size is (3, 224, 224) for ImageNet 1k.
