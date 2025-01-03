@@ -35,7 +35,7 @@ trainset = datasets.ImageFolder(root='/mnt/imagenet/ILSVRC/Data/CLS-LOC/train', 
 trainloader = DataLoader(trainset, batch_size=128, shuffle=True, num_workers=16, pin_memory=True)
 
 testset = datasets.ImageFolder(root='/mnt/imagenet/ILSVRC/Data/CLS-LOC/val', transform=lambda img: test_transform(image=np.array(img))['image'])
-testloader = DataLoader(testset, batch_size=1000, shuffle=False, num_workers=16, pin_memory=True)
+testloader = DataLoader(testset, batch_size=500, shuffle=False, num_workers=16, pin_memory=True)
 
 # Initialize model, loss function, and optimizer
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -49,7 +49,7 @@ optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e
 # Training function
 from torch.amp import autocast
 
-def train(model, device, train_loader, optimizer, criterion, epoch, accumulation_steps=4):
+def train(model, device, train_loader, optimizer, criterion, epoch, accumulation_steps=2):
     model.train()
     running_loss = 0.0
     correct1 = 0
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     results = []
     learning_rates = []
 
-    for epoch in range(1, 6):  # 20 epochs
+    for epoch in range(1, 26):  # 20 epochs
         train_accuracy1, train_accuracy5, train_loss = train(model, device, trainloader, optimizer, criterion, epoch)
         test_accuracy1, test_accuracy5, test_loss, misclassified_images, misclassified_labels, misclassified_preds = test(model, device, testloader, criterion)
         print(f'Epoch {epoch} | Train Top-1 Acc: {train_accuracy1:.2f} | Train Top-5 Acc: {train_accuracy5:.2f} | Test Top-1 Acc: {test_accuracy1:.2f} | Test Top-5 Acc: {test_accuracy5:.2f}')  
@@ -154,6 +154,18 @@ if __name__ == '__main__':
         if patience_counter >= patience:
             print("Early stopping triggered. Training terminated.")
             break
+
+        # Only process misclassified samples after the last epoch
+        if epoch == 25:
+            # Display or process misclassified samples
+            if misclassified_images:
+                print("\nDisplaying some misclassified samples from the last epoch:")
+                misclassified_grid = make_grid(misclassified_images[:16], nrow=4, normalize=True, scale_each=True)
+                plt.figure(figsize=(8, 8))
+                plt.imshow(misclassified_grid.permute(1, 2, 0))
+                plt.title("Misclassified Samples")
+                plt.axis('off')
+                plt.show()
 
     # Print the Top-1 accuracy results in a tab-separated format
     print("\nEpoch\tTrain Top-1 Accuracy\tTest Top-1 Accuracy")
@@ -203,13 +215,3 @@ if __name__ == '__main__':
 
     plt.tight_layout()
     plt.show()
-
-    # Display some misclassified samples
-    if misclassified_images:
-        print("\nDisplaying some misclassified samples from the last epoch:")
-        misclassified_grid = make_grid(misclassified_images[:16], nrow=4, normalize=True, scale_each=True)
-        plt.figure(figsize=(8, 8))
-        plt.imshow(misclassified_grid.permute(1, 2, 0))
-        plt.title("Misclassified Samples")
-        plt.axis('off')
-        plt.show()
