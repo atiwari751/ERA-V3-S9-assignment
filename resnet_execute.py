@@ -13,6 +13,7 @@ from torchvision.utils import make_grid
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 import numpy as np
+from torchsummary import summary
 
 # Define transformations
 train_transform = A.Compose([
@@ -32,16 +33,18 @@ test_transform = A.Compose([
 
 # Train dataset and loader
 trainset = datasets.ImageFolder(root='/mnt/imagenet/ILSVRC/Data/CLS-LOC/train', transform=lambda img: train_transform(image=np.array(img))['image'])
-trainloader = DataLoader(trainset, batch_size=128, shuffle=True, num_workers=16, pin_memory=True)
+trainloader = DataLoader(trainset, batch_size=128, shuffle=True, num_workers=8, pin_memory=True)
 
 testset = datasets.ImageFolder(root='/mnt/imagenet/ILSVRC/Data/CLS-LOC/val', transform=lambda img: test_transform(image=np.array(img))['image'])
-testloader = DataLoader(testset, batch_size=500, shuffle=False, num_workers=16, pin_memory=True)
+testloader = DataLoader(testset, batch_size=500, shuffle=False, num_workers=8, pin_memory=True)
 
 # Initialize model, loss function, and optimizer
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print( device )
 model = ResNet50()
 model = torch.nn.DataParallel(model)
 model = model.to(device)
+summary(model, input_size=(3, 224, 224))
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
@@ -49,7 +52,7 @@ optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e
 # Training function
 from torch.amp import autocast
 
-def train(model, device, train_loader, optimizer, criterion, epoch, accumulation_steps=2):
+def train(model, device, train_loader, optimizer, criterion, epoch, accumulation_steps=4):
     model.train()
     running_loss = 0.0
     correct1 = 0
