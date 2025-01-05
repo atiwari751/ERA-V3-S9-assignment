@@ -9,13 +9,15 @@ def save_checkpoint(model, optimizer, epoch, loss, path):
         'optimizer_state_dict': optimizer.state_dict(),
         'loss': loss,
     }, path)
+    print(f"Checkpoint saved at epoch {epoch}")
 
 def load_checkpoint(model, optimizer, path):
-    checkpoint = torch.load(path)
+    checkpoint = torch.load(path, weights_only=True)
     model.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     epoch = checkpoint['epoch']
     loss = checkpoint['loss']
+    print(f"Checkpoint loaded, resuming from epoch {epoch}")
     return model, optimizer, epoch, loss
 
 def plot_training_curves(epochs, train_acc1, test_acc1, train_acc5, test_acc5, train_losses, test_losses, learning_rates):

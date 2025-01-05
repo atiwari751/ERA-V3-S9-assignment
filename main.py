@@ -5,11 +5,15 @@ from resnet_model import ResNet50
 from data_utils import get_train_transform, get_test_transform, get_data_loaders
 from train_test import train, test
 from utils import save_checkpoint, load_checkpoint, plot_training_curves, plot_misclassified_samples
+from torchsummary import summary
 
 def main():
     # Initialize model, loss function, and optimizer
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = ResNet50().to(device)
+    model = ResNet50()
+    model = torch.nn.DataParallel(model)
+    model = model.to(device)
+    summary(model, input_size=(3, 224, 224))
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
 
@@ -56,7 +60,9 @@ def main():
     plot_training_curves(epochs, train_acc1, test_acc1, train_acc5, test_acc5, train_losses, test_losses, learning_rates)
 
     # Plot misclassified samples
+    '''
     plot_misclassified_samples(misclassified_images, misclassified_labels, misclassified_preds, classes=['class1', 'class2', ...])  # Replace with actual class names
+    '''
 
 if __name__ == '__main__':
     main() 
