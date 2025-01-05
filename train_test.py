@@ -31,6 +31,9 @@ def train(model, device, train_loader, optimizer, criterion, epoch, accumulation
 
         pbar.set_description(desc=f'Epoch {epoch} | Loss: {running_loss / (batch_idx + 1):.4f} | Top-1 Acc: {100. * correct1 / total:.2f} | Top-5 Acc: {100. * correct5 / total:.2f}')
 
+        if (batch_idx + 1) % 50 == 0:
+            torch.cuda.empty_cache()
+
     return 100. * correct1 / total, 100. * correct5 / total, running_loss / len(train_loader)
 
 def test(model, device, test_loader, criterion):
@@ -56,11 +59,13 @@ def test(model, device, test_loader, criterion):
             correct5 += predicted.eq(targets.view(-1, 1).expand_as(predicted)).sum().item()
 
             # Collect misclassified samples
+            '''
             for i in range(inputs.size(0)):
                 if targets[i] not in predicted[i, :1]:
                     misclassified_images.append(inputs[i].cpu())
                     misclassified_labels.append(targets[i].cpu())
                     misclassified_preds.append(predicted[i, :1].cpu())
+            '''
 
     test_accuracy1 = 100. * correct1 / total
     test_accuracy5 = 100. * correct5 / total
