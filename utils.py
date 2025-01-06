@@ -9,13 +9,15 @@ def save_checkpoint(model, optimizer, epoch, loss, path):
         'optimizer_state_dict': optimizer.state_dict(),
         'loss': loss,
     }, path)
+    print(f"Checkpoint saved at epoch {epoch}")
 
 def load_checkpoint(model, optimizer, path):
-    checkpoint = torch.load(path)
+    checkpoint = torch.load(path, weights_only=True)
     model.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     epoch = checkpoint['epoch']
     loss = checkpoint['loss']
+    print(f"Checkpoint loaded, resuming from epoch {epoch}")
     return model, optimizer, epoch, loss
 
 def plot_training_curves(epochs, train_acc1, test_acc1, train_acc5, test_acc5, train_losses, test_losses, learning_rates):
@@ -63,3 +65,59 @@ def plot_misclassified_samples(misclassified_images, misclassified_labels, miscl
         plt.title("Misclassified Samples")
         plt.axis('off')
         plt.show() 
+
+def find_lr(model, criterion, optimizer, train_loader, num_epochs=1, start_lr=1e-7, end_lr=10, lr_multiplier=1.1):
+    """
+    Find the optimal learning rate using LR Finder.
+    
+    Args:
+    - model: The model to train
+    - criterion: Loss function (e.g., CrossEntropyLoss)
+    - optimizer: Optimizer (e.g., SGD)
+    - train_loader: DataLoader for training data
+    - num_epochs: Number of epochs to run the LR Finder (typically 1-2)
+    - start_lr: Starting learning rate for the experiment
+    - end_lr: Maximum learning rate (used for scaling)
+    - lr_multiplier: Factor by which the learning rate is increased every batch
+    
+    Returns:
+    - A plot of loss vs learning rate
+    """
+    lrs = []
+    losses = []
+    avg_loss = 0.0
+    batch_count = 0
+    
+    lr = start_lr
+    for epoch in range(num_epochs):
+        model.train()
+        for inputs, labels in train_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            optimizer.param_groups[0]['lr'] = lr  # Set the learning rate
+            
+            # Forward pass
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            
+            avg_loss += loss.item()
+            batch_count += 1
+            lrs.append(lr)
+            losses.append(loss.item())
+            
+            # Increase the learning rate for next batch
+            lr *= lr_multiplier
+        
+        avg_loss /= batch_count
+        print(f"Epoch [{epoch+1}/{num_epochs}], Avg Loss: {avg_loss:.4f}")
+    
+    # Plot the loss vs learning rate
+    plt.plot(lrs, losses)
+    plt.xscale('log')
+    plt.xlabel('Learning Rate')
+    plt.ylabel('Loss')
+    plt.title('Learning Rate Finder')
+    plt.show()
+
