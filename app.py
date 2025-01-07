@@ -36,15 +36,17 @@ def predict(image):
     probabilities = torch.nn.functional.softmax(outputs, dim=1)[0]
     top5_prob, top5_catid = torch.topk(probabilities, 5)
     
-    results = []
+    results = "<div style='font-family: Arial, sans-serif; font-size: 18px;'>"
     for i in range(top5_prob.size(0)):
         class_index = top5_catid[i].item()
         class_label = class_labels.get(class_index, "Unknown")
         prob = top5_prob[i].item() * 100
-        results.append(f"{class_label}: {prob:.2f}%")
+        results += f"<div style='margin-bottom: 10px;'><strong>{class_label}</strong>: {prob:.2f}%</div>"
+        results += f"<div style='background-color: #ddd; width: 100%;'><div style='width: {prob}%; background-color: #4CAF50; height: 20px;'></div></div>"
+    results += "</div>"
     
-    return "\n".join(results)
+    return results
 
 # Create the Gradio interface
-iface = gr.Interface(fn=predict, inputs=gr.Image(type="pil"), outputs="text", title="ResNet 50 Image Classifier")
+iface = gr.Interface(fn=predict, inputs=gr.Image(type="pil"), outputs="html", title="ResNet 50 Image Classifier")
 iface.launch() 
