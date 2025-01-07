@@ -111,7 +111,7 @@ Delta (train-test) accuracy log - note the model was unable to reduce underfitti
 
 ## Model Logs
 
-Checkpoint loaded, resuming from epoch 1
+```
 Epoch 1 | Loss: 4.1308 | Top-1 Acc: 18.95 | Top-5 Acc: 40.25:
 100%|█████████████████████████████████████████████████████████████████████████████████████|
 10010/10010 [55:03<00:00,  3.03it/s]
@@ -387,3 +387,4 @@ Epoch 39 | Loss: 1.4071 | Top-1 Acc: 67.30 | Top-5 Acc: 86.46:
 10010/10010 [55:07<00:00,  3.03it/s]
 Test Loss: 1.1876, Top-1 Accuracy: 70.27, Top-5 Accuracy: 89.94
 Epoch 39 | Train Top-1 Acc: 67.30 | Test Top-1 Acc: 70.27
+```
